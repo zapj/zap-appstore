@@ -1,24 +1,33 @@
 #!/bin/bash
+# PostgreSQL 卸载脚本（zap appstore 调用）
+# 依赖环境变量（由 zapexec 注入）：APPS_DIR APP_VERSION MAJOR_VERSION
+set -euo pipefail
 
+INSTALL_DIR="${APPS_DIR}/postgresql-${MAJOR_VERSION:-${APP_VERSION}}"
 
+# ── 停止并禁用服务 ─────────────────────────────────────────
 echo "stop postgresql service"
-if command -v systemctl >/dev/null 2>&1;then
-    systemctl stop postgresql.service
-    systemctl disable postgresql.service
-elif command -v service >/dev/null 2>&1;then
-    service postgresql stop
-    chkconfig --del postgresql.service
-fi
+systemctl stop postgresql.service 2>/dev/null || true
+systemctl disable postgresql.service 2>/dev/null || true
 echo "wait postgresql stop"
 sleep 3
-  
-if [ -d "$APP_PATH" ];then
-    echo "Removing $APP_NAME..."
-    rm -rf $APP_PATH
-    echo "Removing $APP_NAME done."
+
+# ── 备份数据 ───────────────────────────────────────────────
+BAK_DIR="/root/zap_bak/postgresql"
+mkdir -p "${BAK_DIR}"
+if [ -d "${INSTALL_DIR}/data" ]; then
+    cp -Rf "${INSTALL_DIR}/data" "${BAK_DIR}/postgresql.$(date +%Y%m%d%H%M%S)"
 fi
 
- 
-if [ -f "/etc/systemd/system/postgresql.service" ];then
-    rm -rf /etc/systemd/system/postgresql.service
+# ── 删除安装目录（zap 侧随后清理 APP_PATH 元数据目录） ─────
+if [ -d "${INSTALL_DIR}" ]; then
+    echo "Removing ${INSTALL_DIR}..."
+    rm -rf "${INSTALL_DIR}"
+    echo "Removing done."
 fi
+
+# ── 移除服务文件 ───────────────────────────────────────────
+rm -f /etc/systemd/system/postgresql.service
+systemctl daemon-reload 2>/dev/null || true
+
+echo "postgresql uninstall successful"

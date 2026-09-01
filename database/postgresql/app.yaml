@@ -8,5 +8,7 @@ tags: [postgresql,db,rdbms]
 allow_multiple_instances: 'no'
 actions:
   bin: 安装
+scripts:
+  install: bin_linux_amd64.sh
 options:
 

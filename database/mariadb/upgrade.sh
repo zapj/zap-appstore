@@ -1,33 +1,17 @@
 #!/bin/bash
-# mariadb 升级脚本
-# 策略：备份数据 -> 卸载旧版（uninstall.sh 自带备份）-> 安装新版
-# 环境变量由 zapexec 注入：$ZAP_PATH $PKG_PATH $APPS_DIR $APP_VERSION $APP_ID $ZAPCTL
+# MariaDB 升级脚本（zap appstore 调用）
+# 依赖环境变量（由 zapexec 注入）：PKG_PATH（包源目录） APP_VERSION APP_OLD_VERSION
+# 升级策略：先执行新版本包自带的卸载脚本，再执行安装脚本
+set -euo pipefail
 
-set -e
+echo "mariadb upgrade: ${APP_OLD_VERSION:-?} -> ${APP_VERSION:-?}"
 
-echo "=== 升级前状态 ==="
-echo "旧版本: ${APP_OLD_VERSION:-unknown}"
-echo "目标版本: ${APP_VERSION}"
-
-# 1. 先停止服务，确保数据一致
-if command -v systemctl >/dev/null 2>&1; then
-    echo "stop mariadb service"
-    systemctl stop mariadb.service || true
+# 调用新版本源目录中的卸载/安装脚本（zap 已注入新版本环境变量）
+if [ -f "${PKG_PATH}/uninstall.sh" ]; then
+    bash "${PKG_PATH}/uninstall.sh" || true
+fi
+if [ -f "${PKG_PATH}/bin.sh" ]; then
+    bash "${PKG_PATH}/bin.sh"
 fi
 
-# 2. 额外备份一份数据（uninstall.sh 也会备份，这里双保险）
-if [ -d "/usr/local/mariadb/data" ]; then
-    echo "=== 备份数据 ==="
-    mkdir -p /root/zap_bak/mariadb
-    cp -Rf /usr/local/mariadb/data /root/zap_bak/mariadb/mariadb.data.$(date +%Y%m%d%H%M%S)
-fi
-
-# 3. 卸载旧版（数据备份由 uninstall.sh 完成）
-echo "=== 卸载旧版 ==="
-bash "$PKG_PATH/uninstall.sh" || true
-
-# 4. 安装新版
-echo "=== 安装新版 ${APP_VERSION} ==="
-bash "$PKG_PATH/bin.sh"
-
-echo "=== mariadb 升级完成 ==="
+echo "mariadb upgrade successful"

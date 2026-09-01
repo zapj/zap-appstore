@@ -10,6 +10,9 @@ dependencies:
   openssl: 1.1.1w 
 actions:
   build: 编译安装
+scripts:
+  install: build_linux_amd64.sh
+  uninstall: uninstall_linux_amd64.sh
 options:
   with:
     enable-shmop:

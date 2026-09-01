@@ -1,17 +1,16 @@
 #!/bin/bash
+# OpenSSL 库卸载脚本（zap appstore 调用）
+# 依赖环境变量（由 zapexec 注入）：APPS_DIR MAJOR_VERSION MINOR_VERSION
+set -euo pipefail
 
+SHORT_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}"
+INSTALL_PATH="${APPS_DIR}/openssl${SHORT_VERSION}"
 
-source $ZAP_PATH/scripts/zap/bash_utils.sh
-
-if [ ! -d "$APP_PATH"];then
-    exit 0
+echo "uninstall openssl"
+rm -f /usr/local/lib/pkgconfig/libssl.pc
+rm -f /usr/local/lib/pkgconfig/libcrypto.pc
+rm -f /usr/local/lib/pkgconfig/openssl.pc
+if [ -d "${INSTALL_PATH}" ]; then
+    rm -rf "${INSTALL_PATH}"
 fi
-echo "uninstall $APP_NAME"
-
-# remove pkg-config
-rm -rf /usr/local/lib/pkgconfig/libssl.pc
-rm -rf /usr/local/lib/pkgconfig/libcrypto.pc
-rm -rf /usr/local/lib/pkgconfig/openssl.pc
-
-rm -rf $APP_PATH
-
+echo "openssl uninstall successful"
