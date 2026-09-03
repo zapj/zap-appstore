@@ -10,8 +10,8 @@ echo "mariadb upgrade: ${APP_OLD_VERSION:-?} -> ${APP_VERSION:-?}"
 if [ -f "${PKG_PATH}/uninstall.sh" ]; then
     bash "${PKG_PATH}/uninstall.sh" || true
 fi
-if [ -f "${PKG_PATH}/bin.sh" ]; then
-    bash "${PKG_PATH}/bin.sh"
+if [ -f "${PKG_PATH}/install.sh" ]; then
+    bash "${PKG_PATH}/install.sh"
 fi
 
 echo "mariadb upgrade successful"

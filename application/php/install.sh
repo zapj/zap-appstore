@@ -1,6 +1,7 @@
 #!/bin/bash
 # PHP 编译安装脚本（zap appstore 调用）
 # 依赖环境变量（由 zapexec 注入）：ZAP_PATH APPS_DIR PKG_PATH APP_PATH APP_VERSION MAJOR_VERSION MINOR_VERSION BUILD_PATH CPU_NUM ZAP_DATA_PATH
+# 可选（options.build 多选，空格拼接注入）：exts —— 如 "bcmath calendar exif"
 #
 # 版本兼容性提示：
 #   PHP 7.0 要求 OpenSSL >= 0.9.8, < 1.2
@@ -43,7 +44,7 @@ PHP_VERSION="${APP_VERSION}"
 # 由此派生出 目录 php-85 / 服务 php-fpm-85 / sock、pid php-fpm-85.sock、.pid,
 # 与 zapd/zapexec 的命名约定一致(php85 → /var/run/php-fpm-85.sock)。
 PHP_SHORT_VERSION="${MAJOR_VERSION}${MINOR_VERSION}"
-PHP_DOWNLOAD_URL="https://cn2.php.net/distributions/php-${PHP_VERSION}.tar.gz"
+PHP_DOWNLOAD_URL="https://mirrors.zap.cn/pkg/php/php-${PHP_VERSION}.tar.gz"
 PHP_DOWNLOAD_NAME="php-${PHP_VERSION}.tar.gz"
 PHP_INSTALL_PATH="${APPS_DIR}/php-${PHP_SHORT_VERSION}"
 PHP_FPM_SOCK="/var/run/php-fpm-${PHP_SHORT_VERSION}.sock"
@@ -53,7 +54,7 @@ PHP_FPM_ERROR_LOG="/var/log/php/php-${PHP_SHORT_VERSION}.log"
 cd "${PKG_PATH}"
 if [ ! -f "${PHP_DOWNLOAD_NAME}" ]; then
     echo "Downloading PHP"
-    wget -c --progress=dot -e dotbytes=100k -O "${PHP_DOWNLOAD_NAME}" "${PHP_DOWNLOAD_URL}"
+    download_file "${PHP_DOWNLOAD_URL}" "${PHP_DOWNLOAD_NAME}"
 fi
 
 echo "unpacking PKGs"
@@ -73,6 +74,24 @@ else
     GD_OPT="${GD_OPT} --with-jpeg"
     if [[ "${APP_VERSION}" > "8.1.0" ]]; then
         GD_OPT="${GD_OPT} --with-webp"
+    fi
+fi
+
+# ── 用户可选扩展（options.build 的 EXTS 多选，勾选值按空格拼接注入 $EXTS）──
+# 逐个展开为 --enable-<ext> 追加到 configure；choices value 即开关名，白名单外跳过
+EXT_OPTS=()
+if [ -n "${EXTS:-}" ]; then
+    read -r -a _exts <<< "${EXTS}"
+    for _e in "${_exts[@]}"; do
+        case "${_e}" in
+            bcmath|calendar|exif|fileinfo)
+                EXT_OPTS+=(--enable-${_e}) ;;
+            *)
+                log_warn "未识别的扩展「${_e}」，已跳过" ;;
+        esac
+    done
+    if [ ${#EXT_OPTS[@]} -gt 0 ]; then
+        log_info "本次安装启用扩展: ${EXTS}"
     fi
 fi
 
@@ -99,7 +118,8 @@ fi
     --with-pdo-mysql=mysqlnd \
     --enable-mbstring \
     --enable-intl \
-    --with-pear
+    --with-pear \
+    "${EXT_OPTS[@]}"
 
 echo "make install"
 make -j "${CPU_NUM:-1}" && make install

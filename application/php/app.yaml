@@ -6,13 +6,24 @@ description: PHP is a server-side scripting language designed for web developmen
 icon: php.png
 tags: [php]
 allow_multiple_instances: 'yes'
-dependencies:
-  openssl: 1.1.1w 
 actions:
   build: 编译安装
 scripts:
-  install: build_linux_amd64.sh
-  uninstall: uninstall_linux_amd64.sh
+  install: install.sh
+  uninstall: uninstall.sh
 options:
-  with:
-    enable-shmop:
+  build:
+    - name: EXTS
+      type: multiselect
+      title: 扩展
+      desc: 选择需要安装的扩展
+      choices:
+        - label: bcmath
+          value: bcmath
+        - label: calendar
+          value: calendar
+        - label: exif
+          value: exif
+        - label: fileinfo
+          value: fileinfo
+      
