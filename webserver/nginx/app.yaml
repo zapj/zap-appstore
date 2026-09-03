@@ -5,6 +5,9 @@ license: Apache-2.0
 homepage: https://nginx.org
 platforms:
   - linux/amd64
+  - linux/arm64
+  - freebsd/amd64
+  - freebsd/arm64
 category: webserver
 description: Nginx is a web server and a reverse proxy server.
 icon: nginx.png
@@ -15,7 +18,7 @@ organization_name : zap
 actions:
   build: 编译安装
 scripts:
-  install: build_linux_amd64.sh
+  install: install.sh
 options:
   build:
     - name: MODULES
@@ -23,12 +26,8 @@ options:
       type: multiselect
       desc: 勾选需要额外编译进 Nginx 的模块（多个选项以空格拼接到 configure）
       choices:
-        - label: http_ssl_module
-          value: --with-http_ssl_module
-        - label: http_gzip_static_module
-          value: --with-http_gzip_static_module
-        - label: http_sub_status_module
-          value: --with-http_stub_status_module
+        - label: http_limit_conn_module
+          value: --with-http_limit_conn_module
         - label: IPv6
           value: --with-ipv6
     - name: EXTRA_CONFIG

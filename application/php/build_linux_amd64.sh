@@ -1,6 +1,6 @@
 #!/bin/bash
 # PHP 编译安装脚本（zap appstore 调用）
-# 依赖环境变量（由 zapexec 注入）：ZAP_PATH ZAPCTL APPS_DIR PKG_PATH APP_ID APP_VERSION MAJOR_VERSION MINOR_VERSION BUILD_PATH CPU_NUM ZAP_DATA_PATH
+# 依赖环境变量（由 zapexec 注入）：ZAP_PATH APPS_DIR PKG_PATH APP_PATH APP_VERSION MAJOR_VERSION MINOR_VERSION BUILD_PATH CPU_NUM ZAP_DATA_PATH
 #
 # 版本兼容性提示：
 #   PHP 7.0 要求 OpenSSL >= 0.9.8, < 1.2
@@ -39,7 +39,10 @@ fi
 echo "PKG_CONFIG_PATH: ${PKG_CONFIG_PATH:-}"
 
 PHP_VERSION="${APP_VERSION}"
-PHP_SHORT_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}"
+# 版本短名 = 主版本号+次版本号直接拼接(不带点):8.5.33 → 85。
+# 由此派生出 目录 php-85 / 服务 php-fpm-85 / sock、pid php-fpm-85.sock、.pid,
+# 与 zapd/zapexec 的命名约定一致(php85 → /var/run/php-fpm-85.sock)。
+PHP_SHORT_VERSION="${MAJOR_VERSION}${MINOR_VERSION}"
 PHP_DOWNLOAD_URL="https://cn2.php.net/distributions/php-${PHP_VERSION}.tar.gz"
 PHP_DOWNLOAD_NAME="php-${PHP_VERSION}.tar.gz"
 PHP_INSTALL_PATH="${APPS_DIR}/php-${PHP_SHORT_VERSION}"
@@ -134,7 +137,7 @@ if command -v systemctl >/dev/null 2>&1; then
         # 生成最小服务单元（部分发行版源码不含 php-fpm.service）
         cat > "/etc/systemd/system/php-fpm-${PHP_SHORT_VERSION}.service" <<EOF
 [Unit]
-Description=The PHP FastCGI Process Manager (${PHP_SHORT_VERSION})
+Description=The PHP FastCGI Process Manager (PHP ${PHP_VERSION})
 After=network.target
 
 [Service]
@@ -170,16 +173,20 @@ if [ ! -e /usr/bin/php ]; then
     ln -s "${PHP_INSTALL_PATH}/bin/php" /usr/bin/php
 fi
 
-# ── 更新 zap 应用表 ────────────────────────────────────────
-COLS_DATA="install_dir=${PHP_INSTALL_PATH},\
-expose=unix:${PHP_FPM_SOCK},\
-status=active,\
-app_status=stoped,\
-instance=php${PHP_SHORT_VERSION},\
-pid_file=${PHP_FPM_PID},\
-config_file=${PHP_INSTALL_PATH}/etc/php.ini"
-
-echo "update zap apps"
-${ZAPCTL} table apps -d "${COLS_DATA}" -w "id=${APP_ID}"
+# ── 登记实例信息(apps/<category>/<name>/info.yaml,供「已安装」展示)──────
+# svc_name=php-fpm-<主次拼接>(如 php-fpm-85,systemd unit 同名),状态探测与
+# 面板启停走 systemctl;pid_file 保留,作为无 systemd(chkconfig) 环境兜底探活。
+ensure_dir "${APP_PATH}"
+cat > "${APP_PATH}/info.yaml" <<EOF
+svc_name: php-fpm-${PHP_SHORT_VERSION}
+instance: php${PHP_SHORT_VERSION}
+install_dir: ${PHP_INSTALL_PATH}
+config_file: ${PHP_INSTALL_PATH}/etc/php.ini
+pid_file: ${PHP_FPM_PID}
+expose: unix:${PHP_FPM_SOCK}
+tags:
+  - language
+  - runtime
+EOF
 
 echo "PHP ${APP_VERSION} installing successful"

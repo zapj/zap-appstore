@@ -1,6 +1,6 @@
 #!/bin/bash
 # MySQL 卸载脚本（zap appstore 调用）
-# 依赖环境变量（由 zapexec 注入）：APP_PATH APP_VERSION ZAP_PATH ZAPCTL
+# 依赖环境变量（由 zapexec 注入）：APPS_DIR APP_VERSION
 set -euo pipefail
 
 INSTALL_DIR="${APPS_DIR}/mysql-${APP_VERSION}"
@@ -12,7 +12,7 @@ if command -v systemctl >/dev/null 2>&1; then
     systemctl disable mysql.service 2>/dev/null || true
 elif command -v service >/dev/null 2>&1; then
     service mysql stop 2>/dev/null || true
-    chkconfig --del mysql.service 2>/dev/null || true
+    chkconfig --del mysql 2>/dev/null || true
 fi
 echo "wait mysql stop"
 sleep 3

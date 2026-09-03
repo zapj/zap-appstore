@@ -1,6 +1,6 @@
 #!/bin/bash
 # PostgreSQL 安装脚本（zap appstore 调用，源码编译）
-# 依赖环境变量（由 zapexec 注入）：ZAP_PATH ZAPCTL APPS_DIR PKG_PATH APP_ID APP_VERSION MAJOR_VERSION CPU_NUM BUILD_PATH
+# 依赖环境变量（由 zapexec 注入）：ZAP_PATH APPS_DIR PKG_PATH APP_PATH APP_VERSION MAJOR_VERSION CPU_NUM BUILD_PATH
 set -euo pipefail
 
 source "${ZAP_PATH}/scripts/zap/bash_utils.sh"
@@ -92,16 +92,21 @@ wzap_conf postgresql_p "${PG_PASSWORD}"
 ${ZAPCTL} config set postgresql_u "zapadm"
 ${ZAPCTL} config set postgresql_p "${PG_PASSWORD}"
 
-# ── 更新 zap 应用表 ────────────────────────────────────────
-COLS_DATA="install_dir=${INSTALL_DIR},\
-expose=tcp:127.0.0.1\:5432,\
-status=active,\
-app_status=stoped,\
-instance=postgresql${MAJOR_VERSION},\
-pid_file=${DATA_DIR}/postmaster.pid,\
-config_file=${INSTALL_DIR}/postgresql.conf"
-
-echo "update zap apps"
-${ZAPCTL} table apps -d "${COLS_DATA}" -w "id=${APP_ID}"
+# ── 登记实例信息(apps/<category>/<name>/info.yaml,供「已安装」展示)──────
+# svc_name=postgresql(systemd unit postgresql.service),状态探测与面板启停走
+# systemctl;pid_file 保留作兜底。config_file 修正为 initdb 实际生成的
+# ${DATA_DIR}/postgresql.conf(原登记 ${INSTALL_DIR}/postgresql.conf 并不存在)。
+ensure_dir "${APP_PATH}"
+cat > "${APP_PATH}/info.yaml" <<EOF
+svc_name: postgresql
+instance: postgresql${MAJOR_VERSION}
+install_dir: ${INSTALL_DIR}
+config_file: ${DATA_DIR}/postgresql.conf
+pid_file: ${DATA_DIR}/postmaster.pid
+expose: tcp:127.0.0.1:5432
+tags:
+  - database
+  - sql
+EOF
 
 echo "postgresql install successful"

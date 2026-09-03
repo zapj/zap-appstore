@@ -1,6 +1,6 @@
 #!/bin/bash
 # MySQL 安装脚本（zap appstore 调用）
-# 依赖环境变量（由 zapexec 注入）：ZAP_PATH ZAPCTL APPS_DIR PKG_PATH APP_ID APP_VERSION
+# 依赖环境变量（由 zapexec 注入）：ZAP_PATH APPS_DIR PKG_PATH APP_PATH APP_VERSION
 set -euo pipefail
 
 source "${ZAP_PATH}/scripts/zap/bash_utils.sh"
@@ -129,16 +129,22 @@ wzap_conf mysql_p "${MYSQL_ROOT_PASSWORD}"
 ${ZAPCTL} config set mysql_u "zapadm"
 ${ZAPCTL} config set mysql_p "${MYSQL_ROOT_PASSWORD}"
 
-# ── 更新 zap 应用表 ────────────────────────────────────────
-COLS_DATA="install_dir=${INSTALL_DIR},\
-expose=unix:/var/run/mysqld/mysqld.sock\ntcp:127.0.0.1\:3306,\
-status=active,\
-app_status=stoped,\
-instance=mysql${APP_VERSION},\
-pid_file=/usr/local/mysql/data/mysql.pid,\
-config_file=/etc/mysql/my.cnf"
-
-echo "update zap apps"
-${ZAPCTL} table apps -d "${COLS_DATA}" -w "id=${APP_ID}"
+# ── 登记实例信息(apps/<category>/<name>/info.yaml,供「已安装」展示)──────
+# svc_name=mysql(systemd unit mysql.service),状态探测与面板启停走 systemctl;
+# pid_file 保留,作为无 systemd 环境下的兜底探活依据。
+ensure_dir "${APP_PATH}"
+cat > "${APP_PATH}/info.yaml" <<EOF
+svc_name: mysql
+instance: mysql${APP_VERSION}
+install_dir: ${INSTALL_DIR}
+config_file: /etc/mysql/my.cnf
+pid_file: /usr/local/mysql/data/mysql.pid
+expose:
+  - unix:/var/run/mysqld/mysqld.sock
+  - tcp:127.0.0.1:3306
+tags:
+  - database
+  - sql
+EOF
 
 echo "mysql install successful"

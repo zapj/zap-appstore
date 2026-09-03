@@ -1,6 +1,6 @@
 #!/bin/bash
 # MariaDB 卸载脚本（zap appstore 调用）
-# 依赖环境变量（由 zapexec 注入）：APPS_DIR APP_VERSION ZAP_PATH ZAPCTL
+# 依赖环境变量（由 zapexec 注入）：APPS_DIR APP_VERSION
 set -euo pipefail
 
 INSTALL_DIR="${APPS_DIR}/mariadb-${APP_VERSION}"
