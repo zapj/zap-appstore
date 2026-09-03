@@ -102,6 +102,11 @@ svc_name: postgresql
 instance: postgresql${MAJOR_VERSION}
 install_dir: ${INSTALL_DIR}
 config_file: ${DATA_DIR}/postgresql.conf
+config_files:
+  - path: ${DATA_DIR}/postgresql.conf
+    label: postgresql.conf（主配置）
+  - path: ${DATA_DIR}/pg_hba.conf
+    label: pg_hba.conf（客户端认证）
 pid_file: ${DATA_DIR}/postmaster.pid
 expose: tcp:127.0.0.1:5432
 tags:

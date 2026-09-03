@@ -202,6 +202,13 @@ svc_name: php-fpm-${PHP_SHORT_VERSION}
 instance: php${PHP_SHORT_VERSION}
 install_dir: ${PHP_INSTALL_PATH}
 config_file: ${PHP_INSTALL_PATH}/etc/php.ini
+config_files:
+  - path: ${PHP_INSTALL_PATH}/etc/php.ini
+    label: php.ini（主配置）
+  - path: ${PHP_INSTALL_PATH}/etc/php-fpm.conf
+    label: php-fpm.conf
+  - path: ${PHP_INSTALL_PATH}/etc/php-fpm.d/www.conf
+    label: php-fpm.d/www.conf（FPM 池）
 pid_file: ${PHP_FPM_PID}
 expose: unix:${PHP_FPM_SOCK}
 tags:

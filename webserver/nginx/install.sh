@@ -269,6 +269,11 @@ svc_name: nginx
 instance: nginx
 install_dir: __INSTALL_PATH__
 config_file: __INSTALL_PATH__/conf/nginx.conf
+config_files:
+  - path: __INSTALL_PATH__/conf/nginx.conf
+    label: nginx.conf（主配置）
+  - path: __INSTALL_PATH__/conf/sites-enabled/default.conf
+    label: sites-enabled/default.conf（默认站点）
 pid_file: /var/run/nginx.pid
 expose: tcp:80
 tags:
