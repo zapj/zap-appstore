@@ -4,7 +4,7 @@ version: [10.48]
 category: library
 description: libpcre2 is a library for reading and writing Perl-Compatible Regular Expressions.
 tags: [libpcre,libpcre2,lib]
-allow_multiple_instances: 'yes'
+allow_multiple_instances: 'no'
 scripts:
   install: install.sh
 
