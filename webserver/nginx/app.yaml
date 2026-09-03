@@ -3,7 +3,6 @@ title: Nginx
 version: [1.25.3,1.24.0]
 license: Apache-2.0
 homepage: https://nginx.org
-config: nginx.yaml
 platforms:
   - linux/amd64
 category: webserver
@@ -19,7 +18,21 @@ scripts:
   install: build_linux_amd64.sh
 options:
   build:
-  - name: mods
-    type: string
-  - name: prefix
-    type: string
+    - name: MODULES
+      label: 编译模块
+      type: multiselect
+      desc: 勾选需要额外编译进 Nginx 的模块（多个选项以空格拼接到 configure）
+      choices:
+        - label: http_ssl_module
+          value: --with-http_ssl_module
+        - label: http_gzip_static_module
+          value: --with-http_gzip_static_module
+        - label: http_sub_status_module
+          value: --with-http_stub_status_module
+        - label: IPv6
+          value: --with-ipv6
+    - name: EXTRA_CONFIG
+      label: 额外 configure 参数
+      type: string
+      placeholder: 如 --add-module=/path --with-debug
+      desc: 追加到 ./configure 的自定义参数（如第三方模块路径）

@@ -55,6 +55,7 @@ tar -xzf "${PCRE2_PKG_NAME}" -C "${BUILD_PATH}"
 echo "building nginx"
 cd "${BUILD_PATH}/${NGINX_DIRNAME}"
 
+# 安装/升级选项（zap 注入 MODULES/EXTRA_CONFIG,未设置时为空）
 ./configure \
     --user=www \
     --group=www \
@@ -66,7 +67,8 @@ cd "${BUILD_PATH}/${NGINX_DIRNAME}"
     --with-stream_ssl_module \
     --with-stream_ssl_preread_module \
     --with-pcre2="${BUILD_PATH}/${PCRE2_DIRNAME}" \
-    --with-zlib="${BUILD_PATH}/${ZLIB_DIRNAME}"
+    --with-zlib="${BUILD_PATH}/${ZLIB_DIRNAME}" \
+    ${EXTRA_CONFIG:-} ${MODULES:-}
 
 make -j "${CPU_NUM:-1}" && make install
 echo "nginx build success"
