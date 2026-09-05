@@ -44,6 +44,8 @@ instance: libpng${S_VERSION}
 install_dir: ${INSTALL_PATH}
 config_file: ${INSTALL_PATH}/lib/pkgconfig/libpng.pc
 expose: none
+include_path: ${INSTALL_PATH}/include
+lib_path: ${INSTALL_PATH}/lib
 tags:
   - library
   - image

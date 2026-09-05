@@ -6,5 +6,5 @@ description: libpng is a library for reading and writing PNG images.
 tags: [libpng,lib]
 allow_multiple_instances: 'yes'
 scripts:
-  install: install_linux_amd64.sh
+  install: install.sh
 
