@@ -66,37 +66,9 @@ if [ ! -f "${PCRE2_SRC}.tar.gz" ]; then
     log_info "download ${PCRE2_SRC}"
     fetch_file "${NGINX_MIRROR}/pcre2/${PCRE2_SRC}.tar.gz" "${PCRE2_SRC}.tar.gz" || exit 1
 fi
-# 注:OpenSSL 源码包在下方「OpenSSL 源码」段按需下载(外部源码树场景不需要)
-
-# ── OpenSSL 源码(始终捆绑编译,不依赖系统 libssl) ─────────────────────────
-OPENSSL_DIR=""
-if [ -n "${OPENSSL_SRC_DIR:-}" ] && [ -f "${OPENSSL_SRC_DIR}/include/openssl/ssl.h" ]; then
-    OPENSSL_DIR="${OPENSSL_SRC_DIR}"
-    log_info "使用外部 OpenSSL 源码树: ${OPENSSL_DIR}"
-else
-    if ! command -v perl >/dev/null 2>&1; then
-        log_warn "缺少 perl(OpenSSL 编译需要),尝试自动安装 ..."
-        if is_os ubuntu debian; then apt-get install -y perl >/dev/null 2>&1 || true
-        elif is_os alpine; then apk add --no-cache perl >/dev/null 2>&1 || true
-        elif command -v dnf >/dev/null 2>&1; then dnf install -y perl >/dev/null 2>&1 || true
-        elif command -v yum >/dev/null 2>&1; then yum install -y perl >/dev/null 2>&1 || true
-        fi
-    fi
-    if ! command -v perl >/dev/null 2>&1; then
-        log_error "缺少 perl,无法编译 OpenSSL;请先安装 perl 后重试"
-        exit 1
-    fi
-    if [ ! -f "${OPENSSL_SRC}.tar.gz" ]; then
-        log_info "下载 ${OPENSSL_SRC}(捆绑编译)"
-        fetch_file "${NGINX_MIRROR}/openssl/${OPENSSL_SRC}.tar.gz" "${OPENSSL_SRC}.tar.gz" || exit 1
-    fi
-    tar -xzf "${OPENSSL_SRC}.tar.gz" -C "${BUILD_PATH}"
-    OPENSSL_DIR="${BUILD_PATH}/${OPENSSL_SRC}"
-fi
-# 源码树校验:缺失头文件说明版本包异常,此时传给 --with-openssl 会导致编译失败
-if [ ! -f "${OPENSSL_DIR}/include/openssl/ssl.h" ]; then
-    log_error "OpenSSL 源码树不完整(缺少 ${OPENSSL_DIR}/include/openssl/ssl.h)"
-    exit 1
+if [ ! -f "${OPENSSL_SRC}.tar.gz" ]; then
+    log_info "download ${OPENSSL_SRC}"
+    fetch_file "${NGINX_MIRROR}/openssl/${OPENSSL_SRC}.tar.gz" "${OPENSSL_SRC}.tar.gz" || exit 1
 fi
 
 # ── 解压 nginx / zlib / pcre2 ─────────────────────────────────────────────
@@ -104,6 +76,7 @@ log_info "解压源码包 ..."
 tar -xzf "${ZLIB_SRC}.tar.gz" -C "${BUILD_PATH}"
 tar -xzf "${NGINX_SRC}.tar.gz" -C "${BUILD_PATH}"
 tar -xzf "${PCRE2_SRC}.tar.gz" -C "${BUILD_PATH}"
+tar -xzf "${OPENSSL_SRC}.tar.gz" -C "${BUILD_PATH}"
 
 # ── 清理旧的同版本安装残留 ───────────────────────────────────────────────
 if [ -d "${INSTALL_PATH}" ]; then
@@ -116,7 +89,7 @@ if [ -d "${INSTALL_PATH}" ]; then
 fi
 
 # ── configure:常规模块 + 依赖 ─────────────────────────────────────────────
-log_info "开始编译 nginx-${APP_VERSION}(OpenSSL ${OPENSSL_VERSION} 源码捆绑) ..."
+log_info "开始编译 nginx-${APP_VERSION}(OpenSSL ${OPENSSL_VERSION}) ..."
 cd "${BUILD_PATH}/${NGINX_SRC}"
 
 configure_args=(
@@ -150,14 +123,12 @@ configure_args=(
     --with-stream_ssl_module
     --with-stream_ssl_preread_module
     --with-stream_realip_module
-    --with-stream_slice_module
     # 依赖(源码树编译)
-    --with-pcre2="${BUILD_PATH}/${PCRE2_SRC}"
+    --with-pcre="${BUILD_PATH}/${PCRE2_SRC}"
     --with-zlib="${BUILD_PATH}/${ZLIB_SRC}"
+    --with-openssl="${BUILD_PATH}/${OPENSSL_SRC}"
+    --with-openssl-opt=no-async
 )
-# 捆绑编译 OpenSSL 源码(与 pcre2/zlib 同级展开在 BUILD_PATH 内)
-configure_args+=(--with-openssl="${OPENSSL_DIR}")
-configure_args+=(--with-openssl-opt=no-async)
 
 # 安装选项(用户从 options 表单提交):MODULES(multiselect,空格分隔)/ EXTRA_CONFIG(string)
 # 追加到 configure 参数末尾
