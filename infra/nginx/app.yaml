@@ -8,7 +8,7 @@ platforms:
   - linux/arm64
   - freebsd/amd64
   - freebsd/arm64
-category: webserver
+category: infra
 description: Nginx is a web server and a reverse proxy server.
 icon: nginx.png
 allow_multiple_instances: 'no'
