@@ -13,6 +13,8 @@ set -euo pipefail
 
 source "${ZAP_PATH}/scripts/zap/bash_utils.sh"
 
+
+
 # ── PHP 依赖检查 ───────────────────────────────────────────
 if ! command -v php >/dev/null 2>&1; then
     log_error "未找到 php 命令：请先在应用商店安装 PHP（安装时勾选「设为全局默认 PHP」）后再安装 Composer"
@@ -20,6 +22,9 @@ if ! command -v php >/dev/null 2>&1; then
 fi
 PHP_BIN="$(command -v php)"
 log_info "使用 PHP: $("${PHP_BIN}" -v | head -n1)"
+export HOME="/root"
+export COMPOSER_HOME="$HOME/.config/composer"
+log_info "HOME=${HOME:-}"
 
 # ── 安装位置 ───────────────────────────────────────────────
 COMPOSER_DIR="${APPS_DIR}/composer"
