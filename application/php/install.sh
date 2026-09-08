@@ -23,21 +23,26 @@ elif command -v yum >/dev/null 2>&1; then
 fi
 
 # ── 运行用户 www（php-fpm 以 www 运行） ────────────────────
-if ! id www >/dev/null 2>&1; then
-    useradd -r -s /sbin/nologin www
-fi
+ensure_user www
 
 preInstallation
 
 # ── 低版本 PHP 需要 openssl 1.1 ───────────────────────────
+# PHP 7.x-8.0 仅兼容 OpenSSL < 3.0,必须链 1.1 实例:
+#   * export PKG_CONFIG_PATH 指向 1.1 实例(其 openssl.pc 的 prefix/libdir 均
+#     指向实例自身,供 ext 的 pkg-config 检查与 >= 8.1 走 pkg-config 时使用);
+#   * PHP 7.x configure 额外支持 --with-openssl=<DIR> 前缀形式:头文件与链接
+#     库直接取自该实例,完全不受系统 pkg-config 默认(3.x)影响,最稳。
+OPENSSL_OPTS="--with-openssl"
 if [[ "${APP_VERSION}" < "8.1.0" ]]; then
     if [ ! -d "${APPS_DIR}/openssl1.1" ]; then
         echo "Please install openssl1.1 first"
         exit 1
     fi
     export PKG_CONFIG_PATH="${APPS_DIR}/openssl1.1/lib/pkgconfig"
+    OPENSSL_OPTS="--with-openssl=${APPS_DIR}/openssl1.1"
 fi
-echo "PKG_CONFIG_PATH: ${PKG_CONFIG_PATH:-}"
+echo "PKG_CONFIG_PATH: ${PKG_CONFIG_PATH:-} | OPENSSL_OPTS: ${OPENSSL_OPTS}"
 
 PHP_VERSION="${APP_VERSION}"
 # 版本短名 = 主版本号+次版本号直接拼接(不带点):8.5.33 → 85。
@@ -106,7 +111,7 @@ fi
     --enable-fpm \
     --with-fpm-user=www \
     --with-fpm-group=www \
-    --with-openssl \
+    ${OPENSSL_OPTS} \
     --with-zlib \
     --with-zip \
     --enable-soap \

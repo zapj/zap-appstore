@@ -23,13 +23,24 @@ if command -v chkconfig >/dev/null 2>&1; then
 fi
 
 # ── 移除全局命令链接 ───────────────────────────────────────
-rm -f /usr/local/bin/php
-rm -f /usr/local/bin/php-cgi
-rm -f /usr/local/bin/pear
-rm -f /usr/local/bin/pecl
-if [ -L /usr/bin/php ]; then
-    rm -f /usr/bin/php
+# 判断当前全局的命令是链接的当前版本
+if [ -L /usr/local/bin/php ] && [ "$(readlink /usr/local/bin/php)" = "${PHP_INSTALL_PATH}/bin/php" ]; then
+    echo "Removing global php link..."
+    rm -f /usr/local/bin/php
 fi
+if [ -L /usr/local/bin/php-cgi ] && [ "$(readlink /usr/local/bin/php-cgi)" = "${PHP_INSTALL_PATH}/bin/php-cgi" ]; then
+    echo "Removing global php-cgi link..."
+    rm -f /usr/local/bin/php-cgi
+fi
+if [ -L /usr/local/bin/pear ] && [ "$(readlink /usr/local/bin/pear)" = "${PHP_INSTALL_PATH}/bin/pear" ]; then
+    echo "Removing global pear link..."
+    rm -f /usr/local/bin/pear
+fi
+if [ -L /usr/local/bin/pecl ] && [ "$(readlink /usr/local/bin/pecl)" = "${PHP_INSTALL_PATH}/bin/pecl" ]; then
+    echo "Removing global pecl link..."
+    rm -f /usr/local/bin/pecl
+fi 
+
 
 # ── 删除安装目录（zap 侧随后清理 APP_PATH 元数据目录） ─────
 if [ -d "${PHP_INSTALL_PATH}" ]; then

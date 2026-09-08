@@ -6,16 +6,6 @@
 #   * 使用公共工具库 bash_utils:统一日志 / fetch_file(curl→wget 自动重试)/
 #     MakeInstall(并行编译失败自动回退串行)/ cpu_count / extract_archive /
 #     ensure_dir / preInstallation(www 用户 + 首次系统编译依赖);
-#   * --libdir=lib 固定库目录,避免部分发行版默认 lib64 导致下方硬编码的
-#     lib/pkgconfig 与 lib/*.so 链接全部失效;
-#   * BUILD_PATH 前缀校验(仅允许 ${ZAP_PATH}/data/appstore/runs/<run_id>/build),异常时拒绝清理;
-#   * perl(OpenSSL 编译必需)缺失自动安装;OpenSSL 3.x 缺 Text::Template 模块
-#     自动补装,仍缺则给出明确提示,不在 configure 阶段才莫名失败;
-#   * 编译成功前不动已有 ${INSTALL_PATH},失败不破坏现网已装载的库;
-#   * 登记实例信息 ${APP_PATH}/info.yaml(instance/install_dir/config_file),
-#     供 Web 端「已安装」列表展示;库无守护进程故不写 svc_name/pid_file;
-#   * 系统级暴露:pkg-config 三个 .pc、ld.so.conf.d 片段 + ldconfig、按 soname
-#     的 libssl.so.* / libcrypto.so.* 兼容链接,供依赖旧版本号的程序加载。
 #
 # 依赖环境变量(由 zapexec 注入):ZAP_PATH APPS_DIR PKG_PATH APP_PATH
 #   APP_NAME APP_VERSION MAJOR_VERSION MINOR_VERSION BUILD_PATH CPU_NUM
@@ -159,26 +149,16 @@ if [ ! -f "${INSTALL_PATH}/ssl/openssl.cnf" ]; then
 fi
 
 # ── 系统级暴露 ─────────────────────────────────────────────────────────────
-# 1) pkg-config:供 pkg-config --cflags --libs openssl 直接使用(php 等依赖)
-ensure_dir /usr/local/lib/pkgconfig
-ln -sf "${INSTALL_PATH}/lib/pkgconfig/openssl.pc"   /usr/local/lib/pkgconfig/openssl.pc
-ln -sf "${INSTALL_PATH}/lib/pkgconfig/libssl.pc"    /usr/local/lib/pkgconfig/libssl.pc
-ln -sf "${INSTALL_PATH}/lib/pkgconfig/libcrypto.pc" /usr/local/lib/pkgconfig/libcrypto.pc
-
-# 2) ld.so 索引:让链接本库的程序运行时能按 soname 找到库文件
-#    (按 major 分文件,1.x / 3.x 实例可各自登记,不互相覆盖)
+# 仅注册 ld.so 索引片段(conf.d + ldconfig),让链接本库的程序运行时能按 soname
+# 找到库文件。1.x / 3.x 实例按 major 分文件,互不覆盖、可安全共存。
+#
+#
+# 编译期选择版本请显式指定:
+#   export PKG_CONFIG_PATH=<prefix>/lib/pkgconfig  (PHP >= 8.1 必须,走 pkg-config)
+#   ./configure --with-openssl=<prefix>            (PHP 7.x 支持 DIR 前缀形式)
+#   pkg-config --cflags --libs openssl             (临时单次使用,加 PKG_CONFIG_PATH)
 ensure_dir /etc/ld.so.conf.d
 printf '%s\n' "${INSTALL_PATH}/lib" > "/etc/ld.so.conf.d/zap-openssl-${MAJOR_VERSION}.conf"
-
-# 3) 旧版本号 soname 兼容链接(/usr/local/lib):供依赖 libssl.so.1.1 / .3
-#    的程序直接加载;若被其它安装占用,覆盖前告警
-for _lib in libssl libcrypto; do
-    _compat="/usr/local/lib/${_lib}.so.${MAJOR_VERSION}"
-    if [ -L "${_compat}" ] && [ "$(readlink "${_compat}")" != "${INSTALL_PATH}/lib/${_lib}.so" ]; then
-        log_warn "${_compat} 已被其它安装占用($(readlink "${_compat}")),将改指向当前安装"
-    fi
-    ln -sf "${INSTALL_PATH}/lib/${_lib}.so" "${_compat}"
-done
 ldconfig >/dev/null 2>&1 || log_warn "ldconfig 执行失败,请手动执行 ldconfig"
 
 # ── 版本自检 ───────────────────────────────────────────────────────────────
@@ -194,6 +174,9 @@ cat > "${APP_PATH}/info.yaml" <<EOF
 instance: openssl${SHORT_VERSION}
 install_dir: ${INSTALL_PATH}
 config_file: ${INSTALL_PATH}/ssl/openssl.cnf
+config_files:
+  - path: /etc/ld.so.conf.d/zap-openssl-${MAJOR_VERSION}.conf
+    label: zap-openssl-${MAJOR_VERSION}.conf
 expose: none
 tags:
   - library
