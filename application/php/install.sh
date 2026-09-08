@@ -1,7 +1,9 @@
 #!/bin/bash
 # PHP 编译安装脚本（zap appstore 调用）
 # 依赖环境变量（由 zapexec 注入）：ZAP_PATH APPS_DIR PKG_PATH APP_PATH APP_VERSION MAJOR_VERSION MINOR_VERSION BUILD_PATH CPU_NUM ZAP_DATA_PATH
-# 可选（options.build 多选，空格拼接注入）：exts —— 如 "bcmath calendar exif"
+# 可选（options.build，值原样注入）：
+#   EXTS        多选，空格拼接 —— 如 "bcmath calendar exif"
+#   SET_DEFAULT bool —— "true"（默认）注册为系统全局默认；"false" 不触碰 /usr/local/bin
 #
 # 版本兼容性提示：
 #   PHP 7.0 要求 OpenSSL >= 0.9.8, < 1.2
@@ -189,13 +191,20 @@ elif command -v chkconfig >/dev/null 2>&1; then
     service "php-fpm-${PHP_SHORT_VERSION}" start
 fi
 
-# ── 全局命令链接 ───────────────────────────────────────────
-ln -sf "${PHP_INSTALL_PATH}/bin/php" /usr/local/bin/php
-ln -sf "${PHP_INSTALL_PATH}/bin/php-cgi" /usr/local/bin/php-cgi
-ln -sf "${PHP_INSTALL_PATH}/bin/pear" /usr/local/bin/pear
-ln -sf "${PHP_INSTALL_PATH}/bin/pecl" /usr/local/bin/pecl
-if [ ! -e /usr/bin/php ]; then
-    ln -s "${PHP_INSTALL_PATH}/bin/php" /usr/bin/php
+# ── 全局命令链接（表单选项 SET_DEFAULT=true 时注册为系统全局默认）──
+# SET_DEFAULT 由安装表单「设为全局默认 PHP」开关注入（true / false）。
+# 缺省按 true 处理，兼容旧版直接执行或快照未含该选项的安装（历史行为为无条件注册）。
+if [ "${SET_DEFAULT:-true}" = "true" ]; then
+    ln -sf "${PHP_INSTALL_PATH}/bin/php" /usr/local/bin/php
+    ln -sf "${PHP_INSTALL_PATH}/bin/php-cgi" /usr/local/bin/php-cgi
+    ln -sf "${PHP_INSTALL_PATH}/bin/pear" /usr/local/bin/pear
+    ln -sf "${PHP_INSTALL_PATH}/bin/pecl" /usr/local/bin/pecl
+    if [ ! -e /usr/bin/php ]; then
+        ln -s "${PHP_INSTALL_PATH}/bin/php" /usr/bin/php
+    fi
+    log_info "已将 PHP ${PHP_VERSION} 注册为全局默认（/usr/local/bin）"
+else
+    log_info "未勾选「设为默认」，跳过 /usr/local/bin 注册，保留现有默认版本"
 fi
 
 # ── 登记实例信息(apps/<category>/<name>/info.yaml,供「已安装」展示)──────

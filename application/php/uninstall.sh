@@ -39,7 +39,12 @@ fi
 if [ -L /usr/local/bin/pecl ] && [ "$(readlink /usr/local/bin/pecl)" = "${PHP_INSTALL_PATH}/bin/pecl" ]; then
     echo "Removing global pecl link..."
     rm -f /usr/local/bin/pecl
-fi 
+fi
+# 补链 /usr/bin/php 同样仅当指向本实例才移除，避免卸载默认版本后残留失效链接
+if [ -L /usr/bin/php ] && [ "$(readlink /usr/bin/php)" = "${PHP_INSTALL_PATH}/bin/php" ]; then
+    echo "Removing global /usr/bin/php link..."
+    rm -f /usr/bin/php
+fi
 
 
 # ── 删除安装目录（zap 侧随后清理 APP_PATH 元数据目录） ─────
