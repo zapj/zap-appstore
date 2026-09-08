@@ -36,13 +36,13 @@ preInstallation
 OPENSSL_OPTS="--with-openssl"
 if [[ "${APP_VERSION}" < "8.1.0" ]]; then
     if [ ! -d "${APPS_DIR}/openssl1.1" ]; then
-        echo "Please install openssl1.1 first"
+        log_error "Please install openssl1.1 first"
         exit 1
     fi
     export PKG_CONFIG_PATH="${APPS_DIR}/openssl1.1/lib/pkgconfig"
     OPENSSL_OPTS="--with-openssl=${APPS_DIR}/openssl1.1"
 fi
-echo "PKG_CONFIG_PATH: ${PKG_CONFIG_PATH:-} | OPENSSL_OPTS: ${OPENSSL_OPTS}"
+log_info "PKG_CONFIG_PATH: ${PKG_CONFIG_PATH:-} | OPENSSL_OPTS: ${OPENSSL_OPTS}"
 
 PHP_VERSION="${APP_VERSION}"
 # 版本短名 = 主版本号+次版本号直接拼接(不带点):8.5.33 → 85。
@@ -58,17 +58,17 @@ PHP_FPM_ERROR_LOG="/var/log/php/php-${PHP_SHORT_VERSION}.log"
 
 cd "${PKG_PATH}"
 if [ ! -f "${PHP_DOWNLOAD_NAME}" ]; then
-    echo "Downloading PHP"
+    log_info "Downloading PHP"
     download_file "${PHP_DOWNLOAD_URL}" "${PHP_DOWNLOAD_NAME}"
 fi
 
-echo "unpacking PKGs"
+log_info "unpacking PKGs"
 rm -rf "${BUILD_PATH}"
 mkdir -p "${BUILD_PATH}"
 tar -xzf "${PHP_DOWNLOAD_NAME}" -C "${BUILD_PATH}"
 
 # ── 编译安装 ───────────────────────────────────────────────
-echo "building PHP ${APP_VERSION}"
+log_info "building PHP ${APP_VERSION}"
 cd "${BUILD_PATH}/php-${APP_VERSION}"
 
 # GD 相关选项随版本差异：PHP 7.x 用 --with-jpeg-dir，8.0 起用 --with-jpeg，8.1 起支持 --with-webp
@@ -126,11 +126,11 @@ fi
     --with-pear \
     "${EXT_OPTS[@]}"
 
-echo "make install"
+log_info "make install"
 make -j "${CPU_NUM:-1}" && make install
 
 if [ ! -d "${PHP_INSTALL_PATH}" ]; then
-    echo "PHP ${APP_VERSION} Install failed"
+    log_error "PHP ${APP_VERSION} Install failed"
     exit 1
 fi
 
@@ -221,4 +221,4 @@ tags:
   - runtime
 EOF
 
-echo "PHP ${APP_VERSION} installing successful"
+log_info "PHP ${APP_VERSION} installing successful"
