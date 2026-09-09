@@ -138,7 +138,28 @@ fi
 
 # ── 配置文件 ───────────────────────────────────────────────
 mkdir -p "${PHP_INSTALL_PATH}/etc/php.d"
-cp "${BUILD_PATH}/php-${APP_VERSION}/php.ini-production" "${PHP_INSTALL_PATH}/etc/php.ini"
+# php.ini：优先官方模板，缺失时回退，保证面板"服务配置 → PHP"始终有可编辑的主配置
+# （PHP 没有 php.ini 也能跑，会退回内置默认值，导致面板探测不到配置）
+if [ -f "${BUILD_PATH}/php-${APP_VERSION}/php.ini-production" ]; then
+    cp "${BUILD_PATH}/php-${APP_VERSION}/php.ini-production" "${PHP_INSTALL_PATH}/etc/php.ini"
+elif [ -f "${BUILD_PATH}/php-${APP_VERSION}/php.ini-development" ]; then
+    cp "${BUILD_PATH}/php-${APP_VERSION}/php.ini-development" "${PHP_INSTALL_PATH}/etc/php.ini"
+elif [ -f "${PHP_INSTALL_PATH}/etc/php.ini-production" ]; then
+    cp "${PHP_INSTALL_PATH}/etc/php.ini-production" "${PHP_INSTALL_PATH}/etc/php.ini"
+else
+    log_warn "源码包未提供 php.ini 模板，写入最小化 php.ini"
+    cat > "${PHP_INSTALL_PATH}/etc/php.ini" <<'PHPEOF'
+[PHP]
+memory_limit = 128M
+post_max_size = 32M
+upload_max_filesize = 32M
+max_execution_time = 60
+max_input_time = 60
+date.timezone = Asia/Shanghai
+display_errors = Off
+expose_php = Off
+PHPEOF
+fi
 if [ -f "${BUILD_PATH}/php-${APP_VERSION}/sapi/fpm/php-fpm.conf" ]; then
     cp "${BUILD_PATH}/php-${APP_VERSION}/sapi/fpm/php-fpm.conf" "${PHP_INSTALL_PATH}/etc/php-fpm.conf"
 else
