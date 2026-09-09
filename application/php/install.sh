@@ -25,7 +25,7 @@ elif command -v yum >/dev/null 2>&1; then
 fi
 
 # ── 运行用户 www（php-fpm 以 www 运行） ────────────────────
-ensure_user www
+ensure_user www www
 
 preInstallation
 

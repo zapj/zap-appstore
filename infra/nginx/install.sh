@@ -39,7 +39,7 @@ PCRE2_SRC="pcre2-${PCRE2_VERSION}"
 OPENSSL_SRC="openssl-${OPENSSL_VERSION}"
 
 # ── 前置:用户 / 目录 / 首次系统依赖 ─────────────────────────────────────
-ensure_user www
+ensure_user www www
 preInstallation
 
 # 编译目标目录需为 zapexec 按本次运行注入的专属路径(runs/<run_id>/build,

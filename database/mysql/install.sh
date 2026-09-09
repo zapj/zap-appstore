@@ -5,7 +5,11 @@ set -euo pipefail
 
 source "${ZAP_PATH}/scripts/zap/bash_utils.sh"
 
-
+# check mysql is installed
+if [ -d "/usr/local/mysql" ]; then
+    log_error "mysql 已安装,请先卸载 mysql 后再安装"
+    exit 1
+fi
 
 # ── 运行时依赖库 ───────────────────────────────────────────
 if command -v apt-get >/dev/null 2>&1; then
@@ -25,13 +29,8 @@ chown -R mysql:mysql /var/log/mysql /var/run/mysqld
 # ── 选择与系统 glibc 匹配的官方二进制包 ───────────────────
 # 仅支持 MySQL 8.0+（5.7 及更早版本已移除）
 MYSQL_SHORT_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}"
-MYSQL_MAJOR="${APP_VERSION%%.*}"
-case "${MYSQL_MAJOR}" in
-    '' | *[!0-9]*)
-        log_error "无法解析 MySQL 版本号: ${APP_VERSION}"
-        exit 1 ;;
-esac
-if [ "${MYSQL_MAJOR}" -lt 8 ]; then
+
+if [ "${MAJOR_VERSION}" -lt 8 ]; then
     log_error "MySQL ${APP_VERSION} 不再受支持：已移除 5.7 及更早版本，请选择 8.0+"
     exit 1
 fi
@@ -280,7 +279,7 @@ install_dir: ${INSTALL_DIR}
 config_file: /etc/mysql/my.cnf
 pid_file: /var/run/mysqld/mysqld.pid
 expose:
-  - unix:/var/run/mysqld/mysqld.sock
+  - unix:/tmp/mysql.sock
   - tcp:127.0.0.1:3306
 tags:
   - database

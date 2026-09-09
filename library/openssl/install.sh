@@ -34,7 +34,7 @@ OPENSSL_EXTRA_CONFIG="${OPENSSL_EXTRA_CONFIG:-}"
 log_info "开始安装 OpenSSL ${APP_VERSION} -> ${INSTALL_PATH}"
 
 # ── 前置:运行用户 / 目录 / 首次系统编译依赖 ───────────────────────────────
-ensure_user www
+ensure_user www www
 preInstallation
 
 # ── perl 预检(OpenSSL 编译必需)────────────────────────────────────────────
