@@ -56,7 +56,8 @@ PHP_DOWNLOAD_NAME="php-${PHP_VERSION}.tar.gz"
 PHP_INSTALL_PATH="${APPS_DIR}/php-${PHP_SHORT_VERSION}"
 PHP_FPM_SOCK="/var/run/php-fpm-${PHP_SHORT_VERSION}.sock"
 PHP_FPM_PID="/var/run/php-fpm-${PHP_SHORT_VERSION}.pid"
-PHP_FPM_ERROR_LOG="/var/log/php/php-${PHP_SHORT_VERSION}.log"
+PHP_ERROR_LOG="/var/log/php/php-${PHP_SHORT_VERSION}.log"
+PHP_FPM_ERROR_LOG="/var/log/php/php-fpm-${PHP_SHORT_VERSION}.log"
 
 cd "${PKG_PATH}"
 if [ ! -f "${PHP_DOWNLOAD_NAME}" ]; then
@@ -171,11 +172,13 @@ else
     cp "${PHP_INSTALL_PATH}/etc/php-fpm.d/www.conf.default" "${PHP_INSTALL_PATH}/etc/php-fpm.d/www.conf"
 fi
 
-mkdir -p /var/log/php
+ensure_dir /var/log/php
 sed -i "s#;pid = run/php-fpm.pid#pid = ${PHP_FPM_PID}#g" "${PHP_INSTALL_PATH}/etc/php-fpm.conf"
-sed -i "s#;error_log = log/php-fpm.log#error_log = ${PHP_FPM_ERROR_LOG}#g" "${PHP_INSTALL_PATH}/etc/php-fpm.conf"
+sed -i "s#;error_log = log/php-fpm.log#error_log = ${PHP_ERROR_LOG}#g" "${PHP_INSTALL_PATH}/etc/php-fpm.conf"
 sed -i "s#listen = 127.0.0.1:9000#listen = ${PHP_FPM_SOCK}#g" "${PHP_INSTALL_PATH}/etc/php-fpm.d/www.conf"
 sed -i "s#;listen.mode = 0660#listen.mode = 0666#g" "${PHP_INSTALL_PATH}/etc/php-fpm.d/www.conf"
+# php_admin_value[error_log]
+sed -i "s#;php_admin_value\[error_log\] = log/php-fpm.log#php_admin_value[error_log] = ${PHP_FPM_ERROR_LOG}#g" "${PHP_INSTALL_PATH}/etc/php-fpm.d/www.conf"
 
 # ── systemd / init.d 服务 ─────────────────────────────────
 if command -v systemctl >/dev/null 2>&1; then
@@ -239,15 +242,15 @@ install_dir: ${PHP_INSTALL_PATH}
 config_file: ${PHP_INSTALL_PATH}/etc/php.ini
 config_files:
   - path: ${PHP_INSTALL_PATH}/etc/php.ini
-    label: php.ini（主配置）
+    label: php.ini
   - path: ${PHP_INSTALL_PATH}/etc/php-fpm.conf
     label: php-fpm.conf
   - path: ${PHP_INSTALL_PATH}/etc/php-fpm.d/www.conf
-    label: php-fpm.d/www.conf（FPM 池）
+    label: php-fpm.d/www.conf(FPM Pool)
 pid_file: ${PHP_FPM_PID}
 expose: unix:${PHP_FPM_SOCK}
 tags:
-  - language
+  - php
   - runtime
 EOF
 

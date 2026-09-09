@@ -3,7 +3,10 @@
 # 依赖环境变量（由 zapexec 注入）：APPS_DIR APP_VERSION
 set -euo pipefail
 
+# 安装目录同时兼容两种命名：mysql-8.0.46（旧）与 mysql-8.0（短版本，当前安装脚本）
+SHORT_VERSION="$(printf '%s' "${APP_VERSION}" | cut -d. -f1-2)"
 INSTALL_DIR="${APPS_DIR}/mysql-${APP_VERSION}"
+INSTALL_DIR_SHORT="${APPS_DIR}/mysql-${SHORT_VERSION}"
 
 # ── 停止并禁用服务 ─────────────────────────────────────────
 echo "stop mysql service"
@@ -38,11 +41,13 @@ rm -f /usr/local/bin/mysqld_safe
 rm -f /usr/local/bin/mysqlcheck
 
 # ── 删除安装目录（zap 侧随后清理 APP_PATH 元数据目录） ─────
-if [ -d "${INSTALL_DIR}" ]; then
-    echo "Removing ${INSTALL_DIR}..."
-    rm -rf "${INSTALL_DIR}"
-    echo "Removing done."
-fi
+for d in "${INSTALL_DIR}" "${INSTALL_DIR_SHORT}"; do
+    if [ -d "${d}" ]; then
+        echo "Removing ${d}..."
+        rm -rf "${d}"
+        echo "Removing done."
+    fi
+done
 
 # ── 移除服务文件 ───────────────────────────────────────────
 rm -f /etc/init.d/mysql
@@ -52,5 +57,10 @@ rm -f /etc/systemd/system/mysqld.service
 if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload 2>/dev/null || true
 fi
+
+# ── 清理加密凭据（/etc/zap/credentials/mysql_*.cred） ───────
+echo "remove mysql credentials"
+"${ZAPCTL}" cred rm mysql root 2>/dev/null || true
+"${ZAPCTL}" cred rm mysql zapadm 2>/dev/null || true
 
 echo "mysql uninstall successful"
