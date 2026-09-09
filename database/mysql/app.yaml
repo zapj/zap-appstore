@@ -1,19 +1,27 @@
 name: mysql
-title: MySQL Community Server
-version: [9.7.2,8.4.11,8.0.46]
+title: MySQL / MariaDB
+version: [9.7.2,8.4.11,8.0.46,12.3.3,11.8.9,10.11.19]
 category: database
-description: MySQL is a relational database management system (RDBMS) developed by Oracle. 
+description: MySQL（Oracle）与 MariaDB（社区维护的 MySQL 分支）。两者一次只能安装其一。
 icon: mysql.png
-tags: [mysql,db]
+tags: [mysql,mariadb,db]
 allow_multiple_instances: 'no'
 actions:
   bin: Install
 scripts:
   install: install.sh
+# 版本 → 家族元数据：合并入口的版本下拉据此分组展示，install.sh 也按同规则分流
+version_meta:
+  "9.7.2":   { family: mysql }
+  "8.4.11":  { family: mysql }
+  "8.0.46":  { family: mysql }
+  "12.3.3":  { family: mariadb }
+  "11.8.9":  { family: mariadb }
+  "10.11.19": { family: mariadb }
 options:
   bin:
     - name: SET_DEFAULT
       label: Symbolic Link
       type: bool
       default: false
-      desc: If checked, the symbolic link will be created in /usr/local/bin (mysql / mysqladmin / mysqldump / mysqlcheck)
+      desc: If checked, symbolic links will be created in /usr/local/bin (mysql / mysqldump / myisamchk). Only applies to MySQL family.
