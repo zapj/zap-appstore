@@ -33,14 +33,14 @@ chown -R mysql:mysql /var/log/mysql /var/run/mysqld
 PKG_TARBALL="mariadb-${APP_VERSION}-linux-systemd-x86_64.tar.gz"
 cd "${PKG_PATH}"
 if [ ! -f "${PKG_TARBALL}" ]; then
-    if ! wget "https://mirrors.zap.cn/pkg/mariadb/${PKG_TARBALL}" -O "${PKG_TARBALL}"; then
-        log_error "Error download mariadb: ${PKG_TARBALL}"
-        exit 1
-    fi
+    log_info "下载 mariadb: ${PKG_TARBALL}"
+    # 统一走 bash_utils::download_file（curl --progress-bar / wget --show-progress）：
+    # 非 TTY 下以 \r 原地刷新，日志里只占一行进度条，而非 wget 默认的逐行 dot 进度
+    download_file "https://mirrors.zap.cn/pkg/mariadb/${PKG_TARBALL}" "${PKG_TARBALL}"
 fi
 tar xf "${PKG_TARBALL}" -C "${APPS_DIR}"
 
-INSTALL_DIR="${APPS_DIR}/mariadb-${APP_VERSION}"
+INSTALL_DIR="${APPS_DIR}/mariadb-${MYSQL_SHORT_VERSION}"
 if [ ! -d "${INSTALL_DIR}" ]; then
     mv "${APPS_DIR}/mariadb-${APP_VERSION}-linux-systemd-x86_64" "${INSTALL_DIR}"
 fi
@@ -61,16 +61,15 @@ ensure_dir "/etc/mysql"
 
 cat > /etc/mysql/my.cnf <<EOF
 [client-server]
-
 port            = 3306
 socket          = /tmp/mysql.sock
 
 [mysqld]
-# ---------- 路径与用户配置 ----------
 user            = mysql
 basedir         = /usr/local/mysql
-datadir         = /data/mysql
+datadir         = /usr/local/mysql/data
 tmpdir          = /tmp
+pid-file        = /var/run/mysqld/mysql.pid
 
 character-set-server  = utf8mb4
 collation-server      = utf8mb4_general_ci
@@ -83,7 +82,9 @@ max_allowed_packet      = 16M
 
 
 default_storage_engine  = InnoDB
-innodb_buffer_pool_size = 1G   # 建议设置为物理内存的 50% - 70%
+
+# 建议设置为物理内存的 50% - 70%
+innodb_buffer_pool_size = 1G
 innodb_log_file_size    = 256M
 innodb_flush_log_at_trx_commit = 1
 innodb_file_per_table   = 1
@@ -192,7 +193,7 @@ svc_name: mysql
 instance: mariadb-${MYSQL_SHORT_VERSION}
 install_dir: ${INSTALL_DIR}
 config_file: /etc/mysql/my.cnf
-pid_file: ${INSTALL_DIR}/data/mysql.pid
+pid_file: /var/run/mysqld/mysqld.pid
 expose:
   - unix:/tmp/mysql.sock
   - tcp:127.0.0.1:3306
