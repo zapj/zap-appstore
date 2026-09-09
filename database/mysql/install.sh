@@ -139,8 +139,10 @@ default-character-set = utf8mb4
 user            = mysql
 port            = 3306
 socket          = /var/run/mysqld/mysqld.sock
+basedir        = /usr/local/mysql
 datadir         = /usr/local/mysql/data
 log-error       = /var/log/mysql/error.log
+pid-file        = /var/run/mysqld/mysqld.pid
 skip-external-locking
 skip-name-resolve
 
