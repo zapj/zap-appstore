@@ -4,14 +4,21 @@
 # mysql-8.0.46 / mariadb-10.11.19（早期完整版本）。
 # 两家安装均以 mysql.service 为服务单元，配置同为 /etc/mysql/my.cnf，
 # 凭据共用 mysql 凭据域（root / zapadm）。
-# 依赖环境变量（由 zapexec 注入）：APPS_DIR APP_VERSION MAJOR_VERSION MINOR_VERSION ZAPCTL
+# 依赖环境变量（由 zapexec 注入）：APPS_DIR APP_VERSION MAJOR_VERSION MINOR_VERSION APP_FAMILY ZAPCTL
+# 可选选项：BACKUP_DATA（app.yaml options.uninstall，true=备份后删除，false=直接删除）
 set -euo pipefail
 
-MAJOR="${MAJOR_VERSION:-}"
-case "${MAJOR}" in
-    10|11|12) FAMILY="mariadb" ;;
-    *) FAMILY="mysql" ;;
-esac
+# 家族以 zapexec 按 version_meta 下发的 APP_FAMILY 为准；
+# 仅当未注入（旧版 zapexec 或 meta 缺失）时回退到按主版本号猜测并告警，保证卸载仍可进行。
+if [ -n "${APP_FAMILY:-}" ]; then
+    FAMILY="${APP_FAMILY}"
+else
+    case "${MAJOR_VERSION:-}" in
+        10|11|12) FAMILY="mariadb" ;;
+        *) FAMILY="mysql" ;;
+    esac
+    echo "[mysql-mariadb] warn: APP_FAMILY 未注入，按主版本号回退猜测 family=${FAMILY}（建议升级 zapexec 以 version_meta 为准）"
+fi
 
 SHORT_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}"
 INSTALL_DIR="${APPS_DIR}/${FAMILY}-${SHORT_VERSION}"
@@ -38,14 +45,18 @@ elif command -v service >/dev/null 2>&1; then
 fi
 sleep 3
 
-# ── 备份数据与配置 ─────────────────────────────────────────
-BAK_DIR="/root/zap_bak/${FAMILY}"
-mkdir -p "${BAK_DIR}"
-if [ -d "${INSTALL_DIR}/data" ]; then
-    cp -Rf "${INSTALL_DIR}/data" "${BAK_DIR}/${FAMILY}.$(date +%Y%m%d%H%M%S)"
-fi
-if [ -d "/etc/mysql" ]; then
-    cp -Rf /etc/mysql "${BAK_DIR}/${FAMILY}.cnf.$(date +%Y%m%d%H%M%S)"
+# ── 备份数据与配置（BACKUP_DATA=false 时跳过，直接删除） ────
+if [ "${BACKUP_DATA:-true}" = "true" ]; then
+    BAK_DIR="/root/zap_bak/${FAMILY}"
+    mkdir -p "${BAK_DIR}"
+    if [ -d "${INSTALL_DIR}/data" ]; then
+        cp -Rf "${INSTALL_DIR}/data" "${BAK_DIR}/${FAMILY}.$(date +%Y%m%d%H%M%S)"
+    fi
+    if [ -d "/etc/mysql" ]; then
+        cp -Rf /etc/mysql "${BAK_DIR}/${FAMILY}.cnf.$(date +%Y%m%d%H%M%S)"
+    fi
+else
+    echo "skip data/config backup (BACKUP_DATA=false)"
 fi
 
 # ── 移除软链与命令 ─────────────────────────────────────────
