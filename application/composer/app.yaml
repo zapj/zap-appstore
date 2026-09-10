@@ -1,6 +1,6 @@
 name: composer
 title: Composer
-version: "latest"
+version: [2.10.3]
 category: application
 description: Composer is a dependency manager for PHP. It allows you to declare the libraries your project depends on and it will manage (install/update) them for you.
 tags: [php, composer]
@@ -8,18 +8,19 @@ scripts:
   install: install.sh
   uninstall: uninstall.sh
 options:
-  - name: INSTALL_SOURCE
-    label: 安装包下载源
-    type: select
-    default: official
-    desc: 选择 Composer 安装器（composer-setup.php）的下载地址。默认从 getcomposer.org 官方下载；官方直连超时或失败时，可切换为 pkg.xyz 中国镜像源（install.phpcomposer.com）。
-    choices:
-      - label: getcomposer.org（官方源，默认）
-        value: official
-      - label: pkg.xyz（中国镜像）
-        value: mirror
-  - name: ENABLE_MIRROR
-    label: 启用全局代理（Packagist 中国镜像）
-    type: bool
-    default: false
-    desc: 勾选后将 Composer 的依赖仓库（Packagist）切换为 pkg.xyz 中国全量镜像，并写入全局配置文件（~/.config/composer/config.json）——这是官方推荐的「修改全局配置文件」方式，对当前系统用户的所有项目生效，国内拉取依赖显著提速；不勾选则保持官方源。卸载时若仍指向该镜像会自动还原。
+  install:
+    - name: INSTALL_SOURCE
+      label: Download Source
+      type: select
+      default: official
+      desc: default is official source, you can choose the mirror source to speed up the download.
+      choices:
+        - label: getcomposer.org (default)
+          value: official
+        - label: pkg.xyz (China mirror)
+          value: mirror
+    - name: ENABLE_MIRROR
+      label: Enable Global Proxy (Packagist China Mirror)   
+      type: bool
+      default: false
+      desc: By checking this option, you will switch Composer's dependency repository (Packagist) to the pkg.xyz China full mirror and write it to the global configuration file (~/.config/composer/config.json) — this is the official recommendation for "modifying the global configuration file", affecting all projects for the current system user, significantly speeding up domestic dependency fetching; if not checked, the official source will be maintained. When uninstalling, if it still points to this mirror, it will be automatically reverted.
