@@ -1,0 +1,45 @@
+name: phpmyadmin
+title: phpMyAdmin
+version: [5.2.3]
+category: webapps
+description: 通过浏览器管理 MySQL / MariaDB 的 PHP 应用，以独立端口提供访问
+tags: [phpmyadmin, mysql, mariadb, webapp]
+allow_multiple_instances: 'no'
+dependencies:
+  php: '>=7.2'
+scripts:
+  install: install.sh
+  uninstall: uninstall.sh
+  upgrade: upgrade.sh
+options:
+  install:
+    intro: >-
+      phpMyAdmin will be installed to /usr/local/apps/phpmyadmin-<version> (symlinked as
+      /usr/local/apps/phpmyadmin) and exposed through a dedicated Nginx server block.
+      The database credentials are NOT stored here: phpMyAdmin uses cookie auth, so you
+      log in with your existing MySQL / MariaDB user and password in the browser.
+    items:
+      - name: DB_HOST
+        label: 数据库地址
+        type: string
+        default: 127.0.0.1
+        desc: 被管理的 MySQL / MariaDB 地址（本机默认 127.0.0.1，也可填内网 IP）
+      - name: DB_PORT
+        label: 数据库端口
+        type: number
+        default: 3306
+        desc: 被管理数据库的端口（MySQL / MariaDB 默认 3306）
+  upgrade:
+    intro: >-
+      Upgrade replaces the program files with the target version and keeps your
+      config.inc.php (blowfish secret and server settings), so logins stay valid.
+  uninstall:
+    intro: >-
+      Uninstall removes the program directory. Database data is never touched
+      — phpMyAdmin only connects to your existing server.
+    items:
+      - name: KEEP_CONFIG
+        label: 保留配置
+        type: bool
+        default: false
+        desc: 勾选后把 config.inc.php 另存为 /usr/local/apps/phpmyadmin-config.inc.php.bak，便于重装后复用
