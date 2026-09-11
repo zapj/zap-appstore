@@ -70,7 +70,7 @@ declare(strict_types=1);
 
 \$cfg['blowfish_secret'] = '${SECRET}';
 \$cfg['DefaultLang'] = 'zh_CN';
-\$cfg['TempDir'] = '${LINK_DIR}/tmp';
+\$cfg['TempDir'] = '/tmp';
 \$cfg['UploadDir'] = '${LINK_DIR}/upload';
 \$cfg['SaveDir'] = '${LINK_DIR}/save';
 
