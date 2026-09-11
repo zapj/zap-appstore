@@ -22,8 +22,8 @@ options:
       - name: DB_HOST
         label: 数据库地址
         type: string
-        default: 127.0.0.1
-        desc: 被管理的 MySQL / MariaDB 地址（本机默认 127.0.0.1，也可填内网 IP）
+        default: localhost
+        desc: 被管理的 MySQL / MariaDB 地址（本机默认 localhost，也可填内网 IP）
       - name: DB_PORT
         label: 数据库端口
         type: number
