@@ -33,13 +33,3 @@ options:
     intro: >-
       Upgrade replaces the program files with the target version and keeps your
       config.inc.php (blowfish secret and server settings), so logins stay valid.
-  uninstall:
-    intro: >-
-      Uninstall removes the program directory. Database data is never touched
-      — phpMyAdmin only connects to your existing server.
-    items:
-      - name: KEEP_CONFIG
-        label: 保留配置
-        type: bool
-        default: false
-        desc: 勾选后把 config.inc.php 另存为 /usr/local/apps/phpmyadmin-config.inc.php.bak，便于重装后复用

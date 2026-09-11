@@ -1,85 +1,66 @@
 #!/bin/bash
 # phpMyAdmin 卸载脚本（zap appstore 调用）
 #
-# 依赖环境变量（由 zapexec 注入）：ZAP_PATH APPS_DIR APP_PATH ZAP_DATA_PATH
-#                                  APP_VERSION MAJOR_VERSION MINOR_VERSION
-# 选项（app.yaml options.uninstall）：
-#   KEEP_CONFIG   true = 保留 config.inc.php 到 ${APPS_DIR}/phpmyadmin-config.inc.php.bak
+# 依赖环境变量（由 zapexec 注入）：ZAP_PATH APPS_DIR APP_PATH APP_VERSION
+#                                  MAJOR_VERSION MINOR_VERSION
 #
-# 说明：仅删除程序目录与 Nginx 配置，不触碰数据库数据。
+# 安全策略（核心：绝不误删其它目录）
+#   1. 安装目录一律以 info.yaml 登记的 install_dir 为准，软链仅作回退；
+#   2. 目标必须是 APPS_DIR（/usr/local/apps）的**直接子目录**；
+#   3. 空值 / 根路径 / APPS_DIR 自身 / 越界路径，一律拒绝删除；
+#   4. 删除前再做一次状态复核，任一环节不满足立即中止。
+#
+# 用到的通用函数 normalize_dir / yaml_value / assert_under_apps_dir
+# 均来自 ${ZAP_PATH}/scripts/zap/bash_utils.sh，其它应用包可直接复用。
+#
+# 说明：仅删除程序目录与软链，不触碰数据库数据。
 set -euo pipefail
 
 source "${ZAP_PATH}/scripts/zap/bash_utils.sh"
 assert_root || exit 1
 
 APP_TITLE="phpMyAdmin"
-KEEP_CONFIG_OPT="${KEEP_CONFIG:-false}"
 LINK_DIR="${APPS_DIR}/phpmyadmin"
-NGINX_AVAIL="/etc/zap/webservers/nginx/sites-available/zap-app-phpmyadmin.conf"
-NGINX_ENABLED="/etc/zap/webservers/nginx/sites-enabled/zap-app-phpmyadmin.conf"
-
-# 安装目录以登记信息为准（版本目录名可能随安装版本变化）
-INSTALL_DIR=""
 INFO_FILE="${APP_PATH}/info.yaml"
-if [ -f "${INFO_FILE}" ]; then
-    INSTALL_DIR="$(grep -m1 '^install_dir:' "${INFO_FILE}" 2>/dev/null | sed 's/^install_dir:[[:space:]]*//' || true)"
+
+# ── 主流程 ──────────────────────────────────────────────────
+
+# 安装目录：info.yaml 登记优先，软链指向次之（通用函数，见 bash_utils.sh）
+INSTALL_DIR="$(resolve_install_dir "${INFO_FILE}" "${LINK_DIR}")"
+
+if [ -z "${INSTALL_DIR}" ]; then
+    log_error "未能确定安装目录（info.yaml 缺失且软链不存在），中止卸载"
+    exit 1
 fi
-if [ -z "${INSTALL_DIR}" ] || [ ! -d "${INSTALL_DIR}" ]; then
-    INSTALL_DIR="${APPS_DIR}/phpmyadmin-${MAJOR_VERSION:-}.${MINOR_VERSION:-}"
-fi
+
 log_info "准备卸载 ${APP_TITLE}（安装目录 ${INSTALL_DIR}）"
 
-# ── 按需保留配置 ────────────────────────────────────────────
-if [ "${KEEP_CONFIG_OPT}" = "true" ] && [ -f "${INSTALL_DIR}/config.inc.php" ]; then
-    BAK_FILE="${APPS_DIR}/phpmyadmin-config.inc.php.bak"
-    if cp -f "${INSTALL_DIR}/config.inc.php" "${BAK_FILE}"; then
-        log_ok "已保留配置：${BAK_FILE}"
-    else
-        log_warn "保留配置失败（继续卸载）：${BAK_FILE}"
+# 目录已不在：只清理残留软链后正常结束（幂等）
+if [ ! -d "${INSTALL_DIR}" ] && [ ! -L "${INSTALL_DIR}" ]; then
+    log_warn "安装目录不存在（可能已被清理）：${INSTALL_DIR}"
+    if [ -L "${LINK_DIR}" ]; then
+        rm -f "${LINK_DIR}"
+        log_ok "已移除失效软链：${LINK_DIR}"
     fi
+    log_ok "${APP_TITLE} uninstalling successful"
+    exit 0
 fi
 
-# ── 移除 Nginx 配置 ─────────────────────────────────────────
-if [ -e "${NGINX_ENABLED}" ] || [ -L "${NGINX_ENABLED}" ]; then
-    rm -f "${NGINX_ENABLED}"
-    log_ok "已移除启用配置：${NGINX_ENABLED}"
-fi
-if [ -f "${NGINX_AVAIL}" ]; then
-    rm -f "${NGINX_AVAIL}"
-    log_ok "已移除站点配置：${NGINX_AVAIL}"
-fi
+# 删除前的安全校验：必须位于 APPS_DIR 之下且是其直接子目录
+assert_under_apps_dir "${INSTALL_DIR}" "${APPS_DIR}" || exit 1
 
-reload_nginx() {
-    if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet nginx 2>/dev/null; then
-        systemctl reload nginx && return 0
-    fi
-    local n
-    for n in "${APPS_DIR}"/nginx-*/sbin/nginx /usr/sbin/nginx /usr/local/nginx/sbin/nginx; do
-        [ -x "${n}" ] && {
-            "${n}" -t >/dev/null 2>&1 && "${n}" -s reload && return 0
-        }
-    done
-    if command -v nginx >/dev/null 2>&1; then
-        nginx -t >/dev/null 2>&1 && nginx -s reload && return 0
-    fi
-    return 1
-}
-if reload_nginx; then
-    log_ok "Nginx 已重载"
-else
-    log_warn "Nginx 重载失败，请手动执行 nginx -s reload 或 systemctl reload nginx"
-fi
-
-# ── 删除程序目录（含软链）──────────────────────────────────
+# 移除软链
 if [ -L "${LINK_DIR}" ]; then
     rm -f "${LINK_DIR}"
     log_ok "已移除软链：${LINK_DIR}"
 fi
-if [ -d "${INSTALL_DIR}" ]; then
-    rm -rf "${INSTALL_DIR}"
-    log_ok "已删除安装目录：${INSTALL_DIR}"
-else
-    log_warn "安装目录不存在（可能已被清理）：${INSTALL_DIR}"
-fi
+
+# 删除前最后一道校验
+[ -d "${INSTALL_DIR}" ] || {
+    log_error "目录状态已变化，中止删除：${INSTALL_DIR}"
+    exit 1
+}
+rm -rf "${INSTALL_DIR}"
+log_ok "已删除安装目录：${INSTALL_DIR}"
 
 log_ok "${APP_TITLE} uninstalling successful"
