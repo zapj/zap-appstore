@@ -103,7 +103,7 @@ cat >"${APP_PATH}/info.yaml" <<EOF
 instance: phpmyadmin
 install_dir: ${INSTALL_DIR}
 config_file: ${INSTALL_DIR}/config.inc.php
-web_url: http://${HOST_IP}:2600/webapps/phpmyadmin
+web_url: http://${HOST_IP}:2600/webapps/phpmyadmin/
 expose: none
 tags:
   - webapp
@@ -111,4 +111,4 @@ tags:
 EOF
 
 log_ok "${APP_TITLE} ${APP_VERSION} installing successful"
-log_info "访问地址：http://${HOST_IP}:2600/webapps/phpmyadmin（使用已有的 MySQL / MariaDB 账号登录）"
+log_info "访问地址：http://${HOST_IP}:2600/webapps/phpmyadmin/（末尾斜杠不要省略，使用已有的 MySQL / MariaDB 账号登录）"
