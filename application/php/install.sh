@@ -179,6 +179,31 @@ sed -i "s#listen = 127.0.0.1:9000#listen = ${PHP_FPM_SOCK}#g" "${PHP_INSTALL_PAT
 sed -i "s#;listen.mode = 0660#listen.mode = 0666#g" "${PHP_INSTALL_PATH}/etc/php-fpm.d/www.conf"
 # php_admin_value[error_log]
 sed -i "s#;php_admin_value\[error_log\] = log/php-fpm.log#php_admin_value[error_log] = ${PHP_FPM_ERROR_LOG}#g" "${PHP_INSTALL_PATH}/etc/php-fpm.d/www.conf"
+# default www
+cat > "${PHP_INSTALL_PATH}/etc/php-fpm.d/www.conf" <<EOF
+[www]
+user = www
+group = www
+listen = ${PHP_FPM_SOCK}
+;listen.backlog = 511
+listen.owner = www
+listen.group = www
+listen.mode = 0666
+;listen.allowed_clients = 127.0.0.1
+
+pm = ondemand
+pm.max_children = 2
+;pm.process_idle_timeout = 10s;
+pm.max_requests = 500
+
+env[HOSTNAME] = $HOSTNAME
+env[PATH] = /usr/local/bin:/usr/bin:/bin
+env[TEMP] = /tmp
+env[TMP] = /tmp
+env[TMPDIR] = /tmp
+
+EOF
+
 
 # ── systemd / init.d 服务 ─────────────────────────────────
 if command -v systemctl >/dev/null 2>&1; then
